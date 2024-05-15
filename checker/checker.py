@@ -15,8 +15,8 @@ import textwrap
 
 import pexpect
 
-TEST_USERNAME = "test"
-TEST_PASSWORD = "test123"
+TEST_USERNAME = "te4454"
+TEST_PASSWORD = "test43"
 EXPECT_TIMEOUT = 1  # 1 second should be enough...
 TEXT_INDENT = "    "
 

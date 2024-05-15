@@ -11,7 +11,20 @@
 #include "parson/parson.h"
 #include <ctype.h>
 
-void register_user(int sockfd, const char *username, const char *password, int *is_register)
+int contains_spaces(char *str)
+{
+    while (*str)
+    {
+        if (isspace(*str))
+        {
+            return 1; // Returnează 1 dacă găsește un spațiu
+        }
+        str++;
+    }
+    return 0; // Returnează 0 dacă nu găsește spații
+}
+
+void register_user(int sockfd, const char *username, const char *password)
 {
     JSON_Value *json_value = json_value_init_object();
     JSON_Object *json_object = json_value_get_object(json_value);
@@ -19,7 +32,6 @@ void register_user(int sockfd, const char *username, const char *password, int *
     json_object_set_string(json_object, "password", password);
 
     char *message = compute_post_request(HOST, REGISTER, "application/json", json_value, NULL, 0, NULL);
-
     send_to_server(sockfd, message);
     free(message);
 
@@ -33,7 +45,6 @@ void register_user(int sockfd, const char *username, const char *password, int *
     if (strncmp(last_line, "ok", 2) == 0)
     {
         // cout << "SUCCES, Creat cu succes!\n";
-        *is_register = 1;
         printf("SUCCES, Creat cu succes!\n");
     }
     else
@@ -108,30 +119,20 @@ void enter_library(int sockfd, char *cookies, char *token)
     {
         token_start += strlen("token\":\""); // Mutăm pointerul la începutul valorii token-ului
         const char *token_end = strstr(token_start, "\"");
-        if (token_end != NULL)
-        {
-            int token_length = token_end - token_start; // Calculăm lungimea token-ului
-            strncpy(token, token_start, token_length);  // Copiem token-ul în buffer-ul nostru
-            token[token_length] = '\0';                 // Terminăm șirul cu un caracter nul
-                                                        // printf("Token: %s\n", token); // Afișăm token-ul
-        }
-        else
-        {
-            printf("EROARE, Token-ul nu este formatat corect!\n");
-        }
+
+        int token_length = token_end - token_start; // Calculăm lungimea token-ului
+        strncpy(token, token_start, token_length);  // Copiem token-ul în buffer-ul nostru
+        token[token_length] = '\0';                 // Terminăm șirul cu un caracter nul
+                                                    // printf("Token: %s\n", token); // Afișăm token-ul
     }
     else
     {
-        printf("EROARE, Token-ul nu a fost găsit în răspuns!\n");
+        printf("EROARE, Nu sunteti logat!\n");
     }
 
     if (strstr(response, "HTTP/1.1 200 OK") != NULL)
     {
         printf("SUCCES, Acces permis!\n");
-    }
-    else
-    {
-        printf("EROARE, Acces nepermis!\n");
     }
 
     free(response);
@@ -139,6 +140,9 @@ void enter_library(int sockfd, char *cookies, char *token)
 
 void get_books(int sockfd, char *cookies, char *token)
 {
+
+    // printf("cookies: %s\n", cookies);
+    // printf("token: %s\n", token);
     if (errorCommandLogin(cookies))
     {
         return;
@@ -148,7 +152,7 @@ void get_books(int sockfd, char *cookies, char *token)
         return;
     }
 
-       char *message = compute_get_request(HOST, BOOKS, NULL, &cookies, 1, token);
+    char *message = compute_get_request(HOST, BOOKS, NULL, &cookies, 1, token);
 
     send_to_server(sockfd, message);
     free(message);
@@ -268,14 +272,6 @@ void get_book_id(int sockfd, char *cookies, char *token)
 
 void add_book(int sockfd, char *cookies, char *token)
 {
-    if (errorCommandLogin(cookies))
-    {
-        return;
-    }
-    if (errorCommandAcces(token))
-    {
-        return;
-    }
     JSON_Value *json_value = json_value_init_object();
     JSON_Object *json_object = json_value_get_object(json_value);
     char title[1000];
@@ -283,20 +279,33 @@ void add_book(int sockfd, char *cookies, char *token)
     char genre[1000];
     char publisher[1000];
     char page_count[1000];
+
     printf("title=");
     fgets(title, sizeof(title), stdin);
     title[strcspn(title, "\n")] = '\0'; // Eliminăm caracterul newline capturat de fgets
+
     printf("author=");
     fgets(author, sizeof(author), stdin);
     author[strcspn(author, "\n")] = '\0'; // Eliminăm caracterul newline capturat de fgets
+
     printf("genre=");
     fgets(genre, sizeof(genre), stdin);
     genre[strcspn(genre, "\n")] = '\0'; // Eliminăm caracterul newline capturat de fgets
+
     printf("publisher=");
     fgets(publisher, sizeof(publisher), stdin);
     publisher[strcspn(publisher, "\n")] = '\0'; // Eliminăm caracterul newline capturat de fgets
+
     printf("page_count=");
-    scanf("%s", page_count);
+    fgets(page_count, sizeof(page_count), stdin);
+    page_count[strcspn(page_count, "\n")] = '\0'; // Eliminăm caracterul newline capturat de fgets
+
+    // Verificare pentru toate câmpurile
+    if (strlen(title) == 0 || strlen(author) == 0 || strlen(genre) == 0 || strlen(publisher) == 0 || strlen(page_count) == 0)
+    {
+        printf("EROARE, Toate câmpurile sunt obligatorii\n");
+        return;
+    }
 
     for (int i = 0; i < strlen(page_count); i++)
     {
@@ -306,6 +315,7 @@ void add_book(int sockfd, char *cookies, char *token)
             return;
         }
     }
+
     int pages = strtol(page_count, NULL, 10); // Convertirea la întreg
     json_object_set_string(json_object, "title", title);
     json_object_set_string(json_object, "author", author);
@@ -315,7 +325,6 @@ void add_book(int sockfd, char *cookies, char *token)
 
     char *message = compute_post_request(HOST, BOOKS, "application/json", json_value, &cookies, 1, token);
     send_to_server(sockfd, message);
-
     free(message);
 
     char *response = receive_from_server(sockfd);
@@ -400,7 +409,6 @@ int main(int argc, char *argv[])
     // char cookies[BUFLEN] = "";
     char *cookies = calloc(BUFLEN, sizeof(char));
     char *token = calloc(BUFLEN, sizeof(char));
-    int is_register = 0;
 
     while (1)
     {
@@ -411,36 +419,51 @@ int main(int argc, char *argv[])
         strtok(command, "\n");
         if (strcmp(command, "register") == 0)
         {
+            sockfd = open_connection(HOST, PORT, AF_INET, SOCK_STREAM, 0);
             // Deschideți conexiunea către server
             printf("username=");
             // std:: cin >> username;
-            scanf("%s", username);
+            fgets(username, sizeof(username), stdin);
             printf("password=");
-            scanf("%s", password);
-            sockfd = open_connection(HOST, PORT, AF_INET, SOCK_STREAM, 0);
+            fgets(password, sizeof(password), stdin);
+
+            // Elimină caracterul newline de la sfârșitul username-ului și parolei, dacă există
+            username[strcspn(username, "\n")] = '\0';
+            password[strcspn(password, "\n")] = '\0';
+
+            if (contains_spaces(username) || contains_spaces(password))
+            {
+                printf("EROARE, Username si parola nu trebuie sa contina spatii!\n");
+                continue;
+            }
 
             // Înregistrați un utilizator
-            register_user(sockfd, username, password, &is_register);
+            register_user(sockfd, username, password);
             close_connection(sockfd);
         }
         else if (strcmp(command, "login") == 0)
         {
+            sockfd = open_connection(HOST, PORT, AF_INET, SOCK_STREAM, 0);
             // printf("is_registdder: %d\n", is_register);
             if (strcmp(cookies, "") != 0)
             {
                 printf("EROARE, Sunteti logat deja!\n");
                 continue;
             }
-            else if (is_register == 0)
+
+            printf("username=");
+            fgets(username, sizeof(username), stdin);
+            printf("password=");
+            fgets(password, sizeof(password), stdin);
+            // Elimină caracterul newline de la sfârșitul username-ului și parolei, dacă există
+            username[strcspn(username, "\n")] = '\0';
+            password[strcspn(password, "\n")] = '\0';
+
+            if (contains_spaces(username) || contains_spaces(password))
             {
-                printf("EROARE, Trebuie sa va inregistrati!\n");
+                printf("EROARE, Username si parola nu trebuie sa contina spatii!\n");
                 continue;
             }
-            printf("username=");
-            scanf("%s", username);
-            printf("password=");
-            scanf("%s", password);
-            sockfd = open_connection(HOST, PORT, AF_INET, SOCK_STREAM, 0);
 
             login_user(sockfd, username, password, cookies);
 
