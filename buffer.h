@@ -3,7 +3,8 @@
 #include <string.h>
 #include <ctype.h>
 
-typedef struct {
+typedef struct
+{
     char *data;
     size_t size;
 } buffer;

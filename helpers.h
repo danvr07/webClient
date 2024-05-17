@@ -13,6 +13,7 @@
 #define BOOKS "/api/v1/tema/library/books"
 #define LOGOUT "/api/v1/tema/auth/logout"
 
+#include "parson/parson.h"
 
 // shows the current error
 void error(const char *msg);
@@ -35,10 +36,22 @@ char *receive_from_server(int sockfd);
 // extracts and returns a JSON from a server response
 char *basic_extract_json_response(char *str);
 
-int errorCommandAcces(char* token) ;
-int errorCommandLogin(char* cookies) ;
+int errorCommandAcces(char *token);
 
+int errorCommandLogin(char *cookies);
 
+void display_success(const char *message);
 
+void display_error(const char *message);
+
+void display_books(JSON_Array *json_array);
+
+void display_book_info(JSON_Object *json_object);
+
+void extract_token(const char *response, char *token);
+
+void extract_cookie(const char *response, char *cookie);
+
+int contains_spaces(char *str);
 
 #endif
