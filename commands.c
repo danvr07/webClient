@@ -32,7 +32,7 @@ void register_user(int sockfd, const char *username, const char *password)
     char *response = receive_from_server(sockfd);
     if (strstr(response, "HTTP/1.1 201 Created") != NULL)
     {
-
+        // user ul a fost creat cu succes
         display_success("Creat cu succes!");
     }
     else if (strstr(response, "is taken!"))
@@ -45,6 +45,7 @@ void register_user(int sockfd, const char *username, const char *password)
 
 void login_user(int sockfd, const char *username, const char *password, char *cookies)
 {
+    // Verificare pentru username și parolă
     if (strcmp(username, "") == 0 || strcmp(password, "") == 0)
     {
         display_error("Username-ul sau parola este goala!");
@@ -64,6 +65,7 @@ void login_user(int sockfd, const char *username, const char *password, char *co
 
     extract_cookie(response, cookies);
 
+    // Verificare pentru răspunsul primit
     if (strstr(response, "HTTP/1.1 200 OK") != NULL)
     {
         display_success("V-ati logat cu succes!");
@@ -92,6 +94,12 @@ void enter_library(int sockfd, char *cookies, char *token)
     free(message);
 
     char *response = receive_from_server(sockfd);
+    // Daca tokenul este deja setat atunci sunt deja in biblioteca
+    if (strcmp(token, "") != 0)
+    {
+        display_error("Acces deja permis!");
+        return;
+    }
 
     if (strstr(response, "token\":\"") != NULL)
     {
@@ -155,18 +163,40 @@ void get_book_id(int sockfd, char *cookies, char *token)
     {
         return;
     }
-    char bookid[1000] = BOOKS;
 
-    char id[1000];
+    char bookid[LINELEN] = BOOKS;
+
+    char id[LINELEN];
     printf("id=");
-    scanf("%s", id);
+    fgets(id, sizeof(id), stdin);
+    id[strcspn(id, "\n")] = '\0'; // Eliminăm caracterul newline capturat de fgets
+
+    // Verificăm dacă ID-ul nu este gol
+    if (strcmp(id, "") == 0)
+    {
+        display_error("ID-ul este gol!");
+        return;
+    }
+
+    // Verificăm dacă ID-ul este format doar din cifre
+    for (int i = 0; i < strlen(id); i++)
+    {
+        if (!isdigit(id[i]))
+        {
+            display_error("ID-ul trebuie să fie un număr!");
+            return;
+        }
+    }
+
     strcat(bookid, "/");
     strcat(bookid, id);
-    char *message = compute_get_request(HOST, bookid, NULL, &cookies, 1, token);
 
+    char *message = compute_get_request(HOST, bookid, NULL, &cookies, 1, token);
     send_to_server(sockfd, message);
     free(message);
+
     char *response = receive_from_server(sockfd);
+
     if (strstr(response, "HTTP/1.1 200 OK") != NULL)
     {
         char *last_line = strrchr(response, '\n');
@@ -183,35 +213,37 @@ void get_book_id(int sockfd, char *cookies, char *token)
     }
     else if (strstr(response, "HTTP/1.1 404 Not Found") != NULL)
     {
-        display_error("Cartea nu exista!");
-    } else if (strstr(response, "HTTP/1.1 401 Unauthorized") != NULL)
+        display_error("Cartea cu acest id nu exista!");
+    }
+    else if (strstr(response, "HTTP/1.1 401 Unauthorized") != NULL)
     {
         display_error("Nu aveti acces!");
-    } else if (strstr(response, "HTTP/1.1 403 Forbidden") != NULL)
+    }
+    else if (strstr(response, "HTTP/1.1 403 Forbidden") != NULL)
     {
         display_error("Nu aveti acces!");
-    } else if (strstr(response, "HTTP/1.1 400 Bad Request") != NULL)
+    }
+    else if (strstr(response, "HTTP/1.1 400 Bad Request") != NULL)
     {
         display_error("ID-ul cartii trebuie sa fie un numar!");
-    } else if (strstr(response, "HTTP/1.1 500 Internal Server Error") != NULL)
+    }
+    else if (strstr(response, "HTTP/1.1 500 Internal Server Error") != NULL)
     {
         display_error("Eroare interna!");
-    } else if (strstr(response, "HTTP/1.1 403 Forbidden") != NULL)
-    {
-        display_error("Nu aveti acces!");
-    } 
-    
+    }
+
+    free(response);
 }
 
 void add_book(int sockfd, char *cookies, char *token)
 {
     JSON_Value *json_value = json_value_init_object();
     JSON_Object *json_object = json_value_get_object(json_value);
-    char title[1000];
-    char author[1000];
-    char genre[1000];
-    char publisher[1000];
-    char page_count[1000];
+    char title[LINELEN];
+    char author[LINELEN];
+    char genre[LINELEN];
+    char publisher[LINELEN];
+    char page_count[LINELEN];
 
     printf("title=");
     fgets(title, sizeof(title), stdin);
@@ -240,6 +272,7 @@ void add_book(int sockfd, char *cookies, char *token)
         return;
     }
 
+    // Verificam daca page_count este un numar
     for (int i = 0; i < strlen(page_count); i++)
     {
         if (!isdigit(page_count[i]))
@@ -282,13 +315,34 @@ void delete_book(int sockfd, char *cookies, char *token)
     {
         return;
     }
-    char bookid[1000] = BOOKS;
 
-    char id[1000];
+    char id[LINELEN];
     printf("id=");
-    scanf("%s", id);
+    fgets(id, sizeof(id), stdin);
+    id[strcspn(id, "\n")] = '\0'; // Eliminăm caracterul newline capturat de fgets
+
+    // Verificăm dacă ID-ul nu este gol
+    if (strlen(id) == 0)
+    {
+        display_error("ID-ul este gol!");
+        return;
+    }
+
+    // Verificăm dacă ID-ul este format doar din cifre
+    for (int i = 0; i < strlen(id); i++)
+    {
+        if (!isdigit(id[i]))
+        {
+            display_error("ID-ul trebuie să fie un număr!");
+            return;
+        }
+    }
+
+    // Construim URL-ul pentru ștergere
+    char bookid[LINELEN] = BOOKS;
     strcat(bookid, "/");
     strcat(bookid, id);
+
     char *message = compute_delete_request(HOST, bookid, NULL, &cookies, 1, token);
 
     send_to_server(sockfd, message);
@@ -298,12 +352,14 @@ void delete_book(int sockfd, char *cookies, char *token)
 
     if (strstr(response, "HTTP/1.1 200 OK") != NULL)
     {
-        display_success("Cartea a fost stearsa!");
+        display_success("Cartea a fost ștearsă cu succes!");
     }
     else
     {
-        display_error("Nu s-a putut sterge cartea!");
+        display_error("Nu s-a putut șterge cartea!");
     }
+
+    free(response);
 }
 
 void logout(int sockfd, char *cookies, char *token)

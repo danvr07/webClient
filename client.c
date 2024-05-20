@@ -11,26 +11,30 @@
 #include "commands.h"
 #include "parson/parson.h"
 #include <ctype.h>
+#include <stdbool.h> // Adăugat pentru a folosi tipul de date bool
 
 int main(int argc, char *argv[])
 {
     int sockfd;
 
-    char command[1000];
-    char username[1000];
-    char password[1000];
+    char command[LINELEN];
+    char username[LINELEN];
+    char password[LINELEN];
     char *cookies = calloc(BUFLEN, sizeof(char));
     char *token = calloc(BUFLEN, sizeof(char));
+    bool command_recognized;
 
     while (1)
     {
+
+        command_recognized = false;
         fgets(command, sizeof(command), stdin); // Citirea comenzii de la utilizator
                                                 // Înlătură newline-ul de la sfârșitul comenzii (înlocuiește '\n' cu '\0')
                                                 // command[strcspn(command, "\n")] = '\0';
         strtok(command, "\n");
         if (strcmp(command, "register") == 0)
         {
-
+            command_recognized = true;
             if (strcmp(cookies, "") != 0)
             {
                 display_error("Trebuie sa va delogati inainte de a va inregistra!");
@@ -59,6 +63,7 @@ int main(int argc, char *argv[])
         }
         else if (strcmp(command, "login") == 0)
         {
+            command_recognized = true;
             sockfd = open_connection(HOST, PORT, AF_INET, SOCK_STREAM, 0);
             if (strcmp(cookies, "") != 0)
             {
@@ -86,12 +91,14 @@ int main(int argc, char *argv[])
         }
         else if (strcmp(command, "enter_library") == 0)
         {
+            command_recognized = true;
             sockfd = open_connection(HOST, PORT, AF_INET, SOCK_STREAM, 0);
             enter_library(sockfd, cookies, token);
             close_connection(sockfd);
         }
         else if (strcmp(command, "get_books") == 0)
         {
+            command_recognized = true;
             sockfd = open_connection(HOST, PORT, AF_INET, SOCK_STREAM, 0);
 
             get_books(sockfd, cookies, token);
@@ -99,34 +106,40 @@ int main(int argc, char *argv[])
         }
         else if (strcmp(command, "get_book") == 0)
         {
+            command_recognized = true;
             sockfd = open_connection(HOST, PORT, AF_INET, SOCK_STREAM, 0);
             get_book_id(sockfd, cookies, token);
             close_connection(sockfd);
         }
         else if (strcmp(command, "add_book") == 0)
         {
+            command_recognized = true;
             sockfd = open_connection(HOST, PORT, AF_INET, SOCK_STREAM, 0);
             add_book(sockfd, cookies, token);
             close_connection(sockfd);
         }
         else if (strcmp(command, "delete_book") == 0)
         {
+            command_recognized = true;
             sockfd = open_connection(HOST, PORT, AF_INET, SOCK_STREAM, 0);
             delete_book(sockfd, cookies, token);
             close_connection(sockfd);
         }
         else if (strcmp(command, "logout") == 0)
         {
+            command_recognized = true;
             sockfd = open_connection(HOST, PORT, AF_INET, SOCK_STREAM, 0);
             logout(sockfd, cookies, token);
             close_connection(sockfd);
         }
         else if (strcmp(command, "exit") == 0)
         {
+            command_recognized = true;
             break;
         }
-        else if(strcmp(command, "help") == 0)
+        else if (strcmp(command, "help") == 0)
         {
+            command_recognized = true;
             printf("Comenzi disponibile:\n");
             printf("register\n");
             printf("login\n");
@@ -137,6 +150,10 @@ int main(int argc, char *argv[])
             printf("delete_book\n");
             printf("logout\n");
             printf("exit\n");
+        }
+        if (!command_recognized)
+        {
+            display_error("Comanda nu este recunoscuta!");
         }
     }
 
