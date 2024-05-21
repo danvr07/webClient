@@ -108,7 +108,7 @@ void enter_library(int sockfd, char *cookies, char *token)
     }
     else if (strstr(response, "HTTP/1.1 401 Unauthorized") != NULL)
     {
-        display_error("Nu aveti acces!");
+        display_error("Nu aveti acces, trebuie sa va autorizati!");
     }
     free(response);
 }
@@ -244,6 +244,15 @@ void add_book(int sockfd, char *cookies, char *token)
     char genre[LINELEN];
     char publisher[LINELEN];
     char page_count[LINELEN];
+
+    if (errorCommandLogin(cookies))
+    {
+        return;
+    }
+    if (errorCommandAcces(token))
+    {
+        return;
+    }
 
     printf("title=");
     fgets(title, sizeof(title), stdin);

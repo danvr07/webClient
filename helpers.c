@@ -156,7 +156,7 @@ int errorCommandAcces(char *token)
     if (strcmp(token, "") == 0)
     {
         // printf("EROARE, Nu aveti acces\n");
-        display_error("Nu aveti acces");
+        display_error("Nu aveti acces!");
         return 1; // Indică o eroare
     }
     return 0; // Nu a apărut nicio eroare
@@ -166,7 +166,7 @@ int errorCommandLogin(char *cookies)
     if (strcmp(cookies, "") == 0)
     {
         // printf("EROARE, Nu sunteti logat\n");
-        display_error("Nu sunteti logat");
+        display_error("Nu sunteti logat!");
         return 1; // Indică o eroare
     }
     return 0; // Nu a apărut nicio eroare
