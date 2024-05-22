@@ -281,6 +281,15 @@ void add_book(int sockfd, char *cookies, char *token)
         return;
     }
 
+    for (int i = 0; i < strlen(genre); i++)
+    {
+        if (isdigit(genre[i]))
+        {
+            display_error("Genre nu trebuie sa contina numere!");
+            return;
+        }
+    }
+
     // Verificam daca page_count este un numar
     for (int i = 0; i < strlen(page_count); i++)
     {
